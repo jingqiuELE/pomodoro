@@ -64,6 +64,7 @@ void loop() {
   uint8_t click;
   bool flipped = false;
   bool timeout = false;
+  bool clicked = false;
 
   lis.getEvent(&event);
   click = lis.getClick();
@@ -75,6 +76,12 @@ void loop() {
   Serial.print(click, HEX);
   Serial.println();
 
+  if (click & 0xFF) {
+      clicked = true;
+  } else {
+      clicked = false;
+  }
+
   if (event.acceleration.z > 5.0) {
       current_side = SIDE_UP;
   } else if (event.acceleration.z < -5.0) {
@@ -84,12 +91,15 @@ void loop() {
   if (current_side != previous_side) {
       flipped = true;
       previous_side = current_side;
+  } else {
+      flipped = false;
   }
 
   current_millis = millis();
-  if ((timer > 0) && (current_millis - previous_millis) > (timer * 1000))
-  {
+  if ((timer > 0) && (current_millis - previous_millis) > (timer * 1000)) {
       timeout = true;
+  } else {
+      timeout = false;
   }
 
   Serial.print("State: ");
@@ -97,7 +107,7 @@ void loop() {
 
   switch (current_state) {
       case STATE_IDLE:
-          if (click & 0x30) {
+          if (clicked == true) {
               current_state = STATE_WORKING;
               timer = 25;
               previous_millis = millis();
@@ -109,12 +119,10 @@ void loop() {
       case STATE_WORKING:
           if (timeout == true) {
               current_state = STATE_PRE_BREAK;
-              timeout = false;
               timer = 5;
               previous_millis = millis();
           } else if (flipped == true) {
               current_state = STATE_BREAK;
-              timeout = false;
               timer = 1;
               previous_millis = millis();
           } else {
@@ -125,7 +133,6 @@ void loop() {
       case STATE_PRE_BREAK:
           if (timeout == true) {
               current_state = STATE_BREAK;
-              timeout = false;
               timer = 1;
               previous_millis = millis();
           } else {
@@ -136,7 +143,6 @@ void loop() {
       case STATE_BREAK:
           if (timeout == true) {
               current_state = STATE_IDLE;
-              timeout = false;
               timer = 0;
           } else {
               colorLed(strip.Color(0, 0, 255));
