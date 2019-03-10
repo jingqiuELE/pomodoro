@@ -78,7 +78,7 @@ void loop() {
   Serial.println(click, HEX);
   Serial.println();
 
-  if (click & 0xFF) {
+  if (click & 0x40) {
       clicked = true;
   } else {
       clicked = false;
