@@ -68,12 +68,14 @@ void loop() {
 
   lis.getEvent(&event);
   click = lis.getClick();
+#if 0
   Serial.print("\t\tX:  "); Serial.print(event.acceleration.x);
   Serial.print("  \tY:  "); Serial.print(event.acceleration.y);
   Serial.print("  \tZ:  "); Serial.print(event.acceleration.z);
   Serial.println(" m/s^2");
+#endif
   Serial.print("click: ");
-  Serial.print(click, HEX);
+  Serial.println(click, HEX);
   Serial.println();
 
   if (click & 0xFF) {
@@ -109,7 +111,7 @@ void loop() {
       case STATE_IDLE:
           if (clicked == true) {
               current_state = STATE_WORKING;
-              timer = 25;
+              timer = 5;
               previous_millis = millis();
           } else {
               colorLed(strip.Color(0, 0, 0));
@@ -133,10 +135,10 @@ void loop() {
       case STATE_PRE_BREAK:
           if (timeout == true) {
               current_state = STATE_BREAK;
-              timer = 1;
+              timer = 5;
               previous_millis = millis();
           } else {
-              colorLed(strip.Color(0, 255, 0));
+              colorLed(strip.Color(255, 255, 0));
           }
           break;
 
@@ -145,17 +147,38 @@ void loop() {
               current_state = STATE_IDLE;
               timer = 0;
           } else {
-              colorLed(strip.Color(0, 0, 255));
+              blinkLed(strip.Color(0, 255, 0), 100);
           }
           break;
 
       default:
           break;
   }
-  delay(1000);
+  delay(50);
 }
 
 void colorLed(uint32_t c) {
+    Serial.println(c, HEX);
     strip.setPixelColor(0, c);
     strip.show();
+}
+
+void blinkLed(uint32_t c, unsigned long interval) {
+    static unsigned long previous = 0;
+    uint32_t color;
+    unsigned long current;
+
+    Serial.println("blinkLed");
+    current = millis();
+    if ((current - previous) >= interval) {
+        previous = current;
+        color = strip.getPixelColor(0);
+        Serial.print("current color: ");
+        Serial.println(color, HEX);
+        if (color != 0) {
+            colorLed(strip.Color(0, 0, 0));
+        } else {
+            colorLed(c);
+        }
+    }
 }
