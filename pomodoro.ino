@@ -26,6 +26,7 @@ Adafruit_LIS3DH lis = Adafruit_LIS3DH();
 // this strongly depend on the range! for 16G, try 5-10
 // for 8G, try 10-20. for 4G try 20-40. for 2G try 40-80
 #define CLICKTHRESHHOLD 40
+#define DEBUG 0
 
 STATE current_state;
 unsigned long previous_millis = 0;
@@ -56,15 +57,15 @@ void loop() {
 
   lis.getEvent(&event);
   click = lis.getClick();
-#if 0
+#if DEBUG
   Serial.print("\t\tX:  "); Serial.print(event.acceleration.x);
   Serial.print("  \tY:  "); Serial.print(event.acceleration.y);
   Serial.print("  \tZ:  "); Serial.print(event.acceleration.z);
   Serial.println(" m/s^2");
-#endif
   Serial.print("click: ");
   Serial.println(click, HEX);
   Serial.println();
+#endif
 
   if (click & 0x40) {
       clicked = true;
@@ -87,14 +88,16 @@ void loop() {
 
   current_millis = millis();
   if ((current_state.timeout > 0) && 
-      (current_millis - previous_millis) > (current_state.timeout * 1000)) {
+      (current_millis - previous_millis) > (current_state.timeout * 60 * 1000)) {
       timeout = true;
   } else {
       timeout = false;
   }
 
+#if DEBUG
   Serial.print("State: ");
   Serial.println(current_state.state_id);
+#endif
 
   switch (current_state.state_id) {
       case STATE_IDLE:
@@ -174,7 +177,6 @@ void switch_state(STATE_ID new_state_id, STATE *current_state) {
 }
 
 void colorLed(uint32_t c) {
-    Serial.println(c, HEX);
     strip.setPixelColor(0, c);
     strip.show();
 }
@@ -184,13 +186,10 @@ void blinkLed(uint32_t c, unsigned long interval) {
     uint32_t color;
     unsigned long current;
 
-    Serial.println("blinkLed");
     current = millis();
     if ((current - previous) >= interval) {
         previous = current;
         color = strip.getPixelColor(0);
-        Serial.print("current color: ");
-        Serial.println(color, HEX);
         if (color != 0) {
             colorLed(strip.Color(0, 0, 0));
         } else {
