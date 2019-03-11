@@ -1,6 +1,7 @@
 #include <Adafruit_NeoPixel.h>
 #include <Adafruit_LIS3DH.h>
 #include <Adafruit_Sensor.h>
+#include "pomodoro.h"
 
 #define PIN 26
 
@@ -26,20 +27,8 @@ Adafruit_LIS3DH lis = Adafruit_LIS3DH();
 // for 8G, try 10-20. for 4G try 20-40. for 2G try 40-80
 #define CLICKTHRESHHOLD 40
 
-typedef enum State {
-    STATE_IDLE,
-    STATE_WORKING,
-    STATE_PRE_BREAK,
-    STATE_BREAK
-} STATE;
-
-typedef enum Side {
-    SIDE_UP,
-    SIDE_DOWN
-} Side;
-
-State current_state;
-uint8_t timer = 0;
+STATE current_state;
+unsigned long previous_millis = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -52,15 +41,14 @@ void setup() {
   }
   lis.setRange(LIS3DH_RANGE_4_G);
   lis.setClick(2, CLICKTHRESHHOLD);
-  current_state = STATE_IDLE;
+  current_state.state_id = STATE_IDLE;
 }
 
 void loop() {
   sensors_event_t event;
-  static unsigned long previous_millis = 0;
   unsigned long current_millis;
-  Side current_side;
-  static Side previous_side = SIDE_UP;
+  static SIDE previous_side = SIDE_UP;
+  SIDE current_side;
   uint8_t click;
   bool flipped = false;
   bool timeout = false;
@@ -98,63 +86,91 @@ void loop() {
   }
 
   current_millis = millis();
-  if ((timer > 0) && (current_millis - previous_millis) > (timer * 1000)) {
+  if ((current_state.timeout > 0) && 
+      (current_millis - previous_millis) > (current_state.timeout * 1000)) {
       timeout = true;
   } else {
       timeout = false;
   }
 
   Serial.print("State: ");
-  Serial.println(current_state);
+  Serial.println(current_state.state_id);
 
-  switch (current_state) {
+  switch (current_state.state_id) {
       case STATE_IDLE:
           if (clicked == true) {
-              current_state = STATE_WORKING;
-              timer = 5;
-              previous_millis = millis();
-          } else {
-              colorLed(strip.Color(0, 0, 0));
+              if (current_side == SIDE_UP) {
+                  switch_state(STATE_WORKING, &current_state);
+              } else {
+                  switch_state(STATE_BREAK, &current_state);
+              }
           }
           break;
 
       case STATE_WORKING:
           if (timeout == true) {
-              current_state = STATE_PRE_BREAK;
-              timer = 5;
-              previous_millis = millis();
+              switch_state(STATE_PRE_BREAK, &current_state);
           } else if (flipped == true) {
-              current_state = STATE_BREAK;
-              timer = 1;
-              previous_millis = millis();
-          } else {
-              colorLed(strip.Color(255, 0, 0));
+              switch_state(STATE_BREAK, &current_state);
           }
           break;
 
       case STATE_PRE_BREAK:
           if (timeout == true) {
-              current_state = STATE_BREAK;
-              timer = 5;
-              previous_millis = millis();
-          } else {
-              colorLed(strip.Color(255, 255, 0));
+              switch_state(STATE_BREAK, &current_state);
           }
           break;
 
       case STATE_BREAK:
           if (timeout == true) {
-              current_state = STATE_IDLE;
-              timer = 0;
-          } else {
-              blinkLed(strip.Color(0, 255, 0), 100);
+              switch_state(STATE_IDLE, &current_state);
           }
           break;
 
       default:
           break;
   }
+
+  if (current_state.ledBlink == true) {
+      blinkLed(current_state.ledColor, 500);
+  } else {
+      colorLed(current_state.ledColor);
+  }
+
   delay(50);
+}
+
+void switch_state(STATE_ID new_state_id, STATE *current_state) {
+    current_state->state_id = new_state_id;
+    switch (new_state_id) {
+        case STATE_IDLE:
+            current_state->timeout = 0;
+            current_state->ledColor = strip.Color(0, 0, 0);
+            current_state->ledBlink = false;
+            break;
+
+        case STATE_WORKING:
+            current_state->timeout = 25;
+            current_state->ledColor = strip.Color(255, 0, 0);
+            current_state->ledBlink = false;
+            break;
+
+        case STATE_PRE_BREAK:
+            current_state->timeout = 5;
+            current_state->ledColor = strip.Color(255, 255, 0);
+            current_state->ledBlink = false;
+            break;
+
+        case STATE_BREAK:
+            current_state->timeout = 1;
+            current_state->ledColor = strip.Color(0, 255, 0);
+            current_state->ledBlink = true;
+            break;
+
+        default:
+            break;
+    }
+    previous_millis = millis();
 }
 
 void colorLed(uint32_t c) {
