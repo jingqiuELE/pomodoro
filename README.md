@@ -10,12 +10,11 @@
     https://www.adafruit.com/product/2809
 
 #### Connection:
-  * Adafruit ESP32 board:
-    3V         ---> Flora NeoPixel + && Adafruit LIS3DH Vin
-    GND        ---> Flora NeoPixel - && Adafruit LIS3DH GND
-    A0/GPIO26  ---> Flora NeoPixel data in
-    SCL        ---> Adafruit LIS3DH SCL
-    SDA        ---> Adafruit LIS3DH SDA
+  * Adafruit ESP32 3V         ---> Flora NeoPixel + && Adafruit LIS3DH Vin
+  * Adafruit ESP32 GND        ---> Flora NeoPixel - && Adafruit LIS3DH GND
+  * Adafruit ESP32 A0/GPIO26  ---> Flora NeoPixel data in
+  * Adafruit ESP32 SCL        ---> Adafruit LIS3DH SCL
+  * Adafruit ESP32 SDA        ---> Adafruit LIS3DH SDA
 
 #### Resources:
   * Adafruit NeoPixel driver:
