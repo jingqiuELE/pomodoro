@@ -42,7 +42,7 @@ void setup() {
   }
   lis.setRange(LIS3DH_RANGE_4_G);
   lis.setClick(2, CLICKTHRESHHOLD);
-  current_state.state_id = STATE_IDLE;
+  switchState(STATE_IDLE, &current_state);
 }
 
 void loop() {
@@ -87,46 +87,41 @@ void loop() {
   }
 
   current_millis = millis();
-  if ((current_state.timeout > 0) && 
-      (current_millis - previous_millis) > (current_state.timeout * 60 * 1000)) {
+  if ((current_state.timeout > 0) &&
+      (current_millis - previous_millis) > current_state.timeout) {
       timeout = true;
   } else {
       timeout = false;
   }
 
-#if DEBUG
-  Serial.print("State: ");
-  Serial.println(current_state.state_id);
-#endif
-
   switch (current_state.state_id) {
       case STATE_IDLE:
           if (clicked == true) {
               if (current_side == SIDE_UP) {
-                  switch_state(STATE_WORKING, &current_state);
+                  switchState(STATE_WORKING, &current_state);
               } else {
-                  switch_state(STATE_BREAK, &current_state);
+                  switchState(STATE_BREAK, &current_state);
               }
           }
           break;
 
       case STATE_WORKING:
           if (timeout == true) {
-              switch_state(STATE_PRE_BREAK, &current_state);
+              switchState(STATE_PRE_BREAK, &current_state);
           } else if (flipped == true) {
-              switch_state(STATE_BREAK, &current_state);
+              switchState(STATE_BREAK, &current_state);
           }
           break;
 
       case STATE_PRE_BREAK:
           if (timeout == true) {
-              switch_state(STATE_BREAK, &current_state);
+              switchState(STATE_BREAK, &current_state);
           }
           break;
 
       case STATE_BREAK:
           if (timeout == true) {
-              switch_state(STATE_IDLE, &current_state);
+              switchState(STATE_IDLE, &current_state);
           }
           break;
 
@@ -136,14 +131,16 @@ void loop() {
 
   if (current_state.ledBlink == true) {
       blinkLed(current_state.ledColor, 500);
-  } else {
-      colorLed(current_state.ledColor);
   }
 
   delay(50);
 }
 
-void switch_state(STATE_ID new_state_id, STATE *current_state) {
+void switchState(STATE_ID new_state_id, STATE *current_state) {
+//#if DEBUG
+    Serial.print("State: ");
+    Serial.println(new_state_id);
+//#endif
     current_state->state_id = new_state_id;
     switch (new_state_id) {
         case STATE_IDLE:
@@ -153,19 +150,19 @@ void switch_state(STATE_ID new_state_id, STATE *current_state) {
             break;
 
         case STATE_WORKING:
-            current_state->timeout = 25;
+            current_state->timeout = 25 * 60 * 1000;
             current_state->ledColor = strip.Color(255, 0, 0);
             current_state->ledBlink = false;
             break;
 
         case STATE_PRE_BREAK:
-            current_state->timeout = 5;
-            current_state->ledColor = strip.Color(255, 255, 0);
+            current_state->timeout = 5 * 60 * 1000;
+            current_state->ledColor = strip.Color(255, 218, 0);
             current_state->ledBlink = false;
             break;
 
         case STATE_BREAK:
-            current_state->timeout = 1;
+            current_state->timeout = 30 * 1000;
             current_state->ledColor = strip.Color(0, 255, 0);
             current_state->ledBlink = true;
             break;
@@ -173,10 +170,16 @@ void switch_state(STATE_ID new_state_id, STATE *current_state) {
         default:
             break;
     }
+
     previous_millis = millis();
+    if (current_state->ledBlink == false) {
+        colorLed(current_state->ledColor);
+    }
 }
 
 void colorLed(uint32_t c) {
+    Serial.print("colorLed: ");
+    Serial.println(c, HEX);
     strip.setPixelColor(0, c);
     strip.show();
 }

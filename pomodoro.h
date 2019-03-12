@@ -12,7 +12,7 @@ typedef enum side {
 
 typedef struct state {
     STATE_ID state_id;
-    uint8_t timeout;         //timeout in seconds.
+    unsigned long timeout;         //timeout in millis.
     uint32_t ledColor;
     bool ledBlink;
 } STATE;
