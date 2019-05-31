@@ -2,7 +2,8 @@ typedef enum state_id {
     STATE_IDLE,
     STATE_WORKING,
     STATE_PRE_BREAK,
-    STATE_BREAK
+    STATE_BREAK,
+    STATE_SLEEP
 } STATE_ID;
 
 typedef enum side {

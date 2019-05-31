@@ -33,6 +33,7 @@ unsigned long previous_millis = 0;
 
 void setup() {
   Serial.begin(115200);
+  print_wakeup_reason();
   strip.begin();
   strip.setBrightness(50);
   strip.show(); // Initialize all pixels to 'off'
@@ -103,6 +104,9 @@ void loop() {
                   switchState(STATE_BREAK, &current_state);
               }
           }
+          if (timeout == true) {
+              switchState(STATE_SLEEP, &current_state);
+          }
           break;
 
       case STATE_WORKING:
@@ -144,9 +148,10 @@ void switchState(STATE_ID new_state_id, STATE *current_state) {
     current_state->state_id = new_state_id;
     switch (new_state_id) {
         case STATE_IDLE:
-            current_state->timeout = 0;
+            current_state->timeout = 30 * 1000;
             current_state->ledColor = strip.Color(0, 0, 0);
             current_state->ledBlink = false;
+
             break;
 
         case STATE_WORKING:
@@ -165,6 +170,10 @@ void switchState(STATE_ID new_state_id, STATE *current_state) {
             current_state->timeout = 30 * 1000;
             current_state->ledColor = strip.Color(0, 255, 0);
             current_state->ledBlink = true;
+            break;
+
+        case STATE_SLEEP:
+            sleep();
             break;
 
         default:
@@ -199,4 +208,40 @@ void blinkLed(uint32_t c, unsigned long interval) {
             colorLed(c);
         }
     }
+}
+
+void sleep(void) {
+  /*
+  We configure the wake up source
+  We set our ESP32 to wake up for an external trigger.
+  There are two types for ESP32, ext0 and ext1 .
+  ext0 uses RTC_IO to wakeup thus requires RTC peripherals
+  to be on while ext1 uses RTC Controller so doesnt need
+  peripherals to be powered on.
+  Note that using internal pullups/pulldowns also requires
+  RTC peripherals to be turned on.
+  */
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_33, 1); //1 = High, 0 = Low
+  Serial.println("Going to sleep now");
+  esp_deep_sleep_start();
+}
+
+/*
+Method to print the reason by which ESP32
+has been awaken from sleep
+*/
+void print_wakeup_reason(){
+  esp_sleep_wakeup_cause_t wakeup_reason;
+
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+
+  switch(wakeup_reason)
+  {
+    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
+    case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
+    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
+  }
 }
