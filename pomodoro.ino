@@ -34,9 +34,6 @@ unsigned long previous_millis = 0;
 void setup() {
   Serial.begin(115200);
   print_wakeup_reason();
-  strip.begin();
-  strip.setBrightness(50);
-  strip.show(); // Initialize all pixels to 'off'
   if (!lis.begin(0x18)) {
       Serial.println("Failed to initialize acceleration sensor!");
       while (1);
@@ -44,6 +41,9 @@ void setup() {
   lis.setRange(LIS3DH_RANGE_4_G);
   lis.setClick(2, CLICKTHRESHHOLD);
   switchState(STATE_IDLE, &current_state);
+  strip.begin();
+  strip.setBrightness(50);
+  strip.show();
 }
 
 void loop() {
@@ -211,6 +211,9 @@ void blinkLed(uint32_t c, unsigned long interval) {
 }
 
 void sleep(void) {
+  sensors_event_t event;
+  lis3dh_configure_int();
+  lis3dh_sleep();
   /*
   We configure the wake up source
   We set our ESP32 to wake up for an external trigger.
@@ -224,6 +227,29 @@ void sleep(void) {
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_33, 1); //1 = High, 0 = Low
   Serial.println("Going to sleep now");
   esp_deep_sleep_start();
+}
+
+/*
+ Configure LIS3DH into low power mode
+ */
+void lis3dh_sleep(void) {
+   /* Set odr=1HZ, low-power mode, enable x,y,z axises. */
+   lis.writeRegister8(LIS3DH_REG_CTRL1, 0x7F);
+}
+
+void lis3dh_configure_int(void) {
+   /*
+   Configure wake-up events for INT1 on lis3dh.
+   INT1 is then connected to GPIO 33 of esp32 board.
+   The interrupt is high effective.
+   */
+   lis.writeRegister8(LIS3DH_REG_INT1THS, 0x0A);
+   lis.writeRegister8(LIS3DH_REG_INT1DUR, 0x00);
+   lis.writeRegister8(LIS3DH_REG_INT1CFG, 0x2A);
+   /* Enable INT1 for l1_IA1 */
+   lis.writeRegister8(LIS3DH_REG_CTRL3, 0x40);
+   /* Latch interrupt request on INT1_SRC register */
+   lis.writeRegister8(LIS3DH_REG_CTRL5, 0x08);
 }
 
 /*
