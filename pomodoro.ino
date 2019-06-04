@@ -233,8 +233,10 @@ void sleep(void) {
  Configure LIS3DH into low power mode
  */
 void lis3dh_sleep(void) {
-   /* Set odr=1HZ, low-power mode, enable x,y,z axises. */
+   /* Set odr=400HZ, low-power mode, enable x,y,z axises. */
    lis.writeRegister8(LIS3DH_REG_CTRL1, 0x7F);
+   /* Disable High res as this doesn't work with Low power mode.*/
+   lis.writeRegister8(LIS3DH_REG_CTRL4, 0x80);
 }
 
 void lis3dh_configure_int(void) {
