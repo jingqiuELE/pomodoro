@@ -40,7 +40,7 @@ void setup() {
   }
   lis.setRange(LIS3DH_RANGE_4_G);
   lis.setClick(2, CLICKTHRESHHOLD);
-  switchState(STATE_IDLE, &current_state);
+  switchState(STATE_WORKING, &current_state);
   strip.begin();
   strip.setBrightness(50);
   strip.show();
@@ -124,7 +124,7 @@ void loop() {
           break;
 
       case STATE_BREAK:
-          if (timeout == true) {
+          if (timeout == true || flipped == true) {
               switchState(STATE_IDLE, &current_state);
           }
           break;
@@ -212,7 +212,7 @@ void blinkLed(uint32_t c, unsigned long interval) {
 
 void sleep(void) {
   sensors_event_t event;
-  lis3dh_configure_int();
+  //lis3dh_configure_int();
   lis3dh_sleep();
   /*
   We configure the wake up source
